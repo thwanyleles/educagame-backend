@@ -7,39 +7,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Professor {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  password  String
-  turmas    Turma[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Aluno {
-  id        Int         @id @default(autoincrement())
-  name      String
-  email     String      @unique
-  password  String
-  turma     Turma?      @relation(fields: [turmaId], references: [id])
-  turmaId   Int?
-  moedas    Int         @default(0)
-  badges    Badge[]
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  Resultado Resultado[]
+model User {
+  id              Int         @id @default(autoincrement())
+  name            String
+  email           String      @unique
+  password        String
+  role            Role
+  turma           Turma?      @relation("AlunoTurma", fields: [turmaId], references: [id])
+  turmaId         Int?
+  turmasProfessor Turma[]     @relation("ProfessorTurma")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  Resultado       Resultado[]
+  Badge           Badge[]
 }
 
 model Turma {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
-  professor   Professor @relation(fields: [professorId], references: [id])
+  professor   User     @relation("ProfessorTurma", fields: [professorId], references: [id])
   professorId Int
-  alunos      Aluno[]
+  alunos      User[]   @relation("AlunoTurma")
   quizzes     Quiz[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Quiz {
@@ -74,7 +65,7 @@ model Resposta {
 
 model Resultado {
   id        Int      @id @default(autoincrement())
-  aluno     Aluno    @relation(fields: [alunoId], references: [id])
+  aluno     User     @relation(fields: [alunoId], references: [id])
   alunoId   Int
   quiz      Quiz     @relation(fields: [quizId], references: [id])
   quizId    Int
@@ -87,7 +78,7 @@ model Badge {
   id          Int      @id @default(autoincrement())
   title       String
   description String?
-  aluno       Aluno?   @relation(fields: [alunoId], references: [id])
+  aluno       User?    @relation(fields: [alunoId], references: [id])
   alunoId     Int?
   createdAt   DateTime @default(now())
 }
@@ -99,4 +90,10 @@ model Notificacao {
   destinatarioTipo String
   destinatarioId   Int
   createdAt        DateTime @default(now())
+}
+
+enum Role {
+  admin
+  professor
+  aluno
 }

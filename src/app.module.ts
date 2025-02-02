@@ -8,6 +8,7 @@ import { GamificationModule } from './modules/gamification/gamification.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
+import { PrismaModule } from './shared/prisma/prisma.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ActivitiesModule } from './modules/activities/activities.module';
     NotificationsModule,
     AuthModule,
     ActivitiesModule,
+    PrismaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
