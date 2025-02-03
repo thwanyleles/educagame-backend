@@ -7,28 +7,33 @@ import {
   Param,
   Body,
   UseGuards,
+  Request,
+  NotFoundException,
 } from '@nestjs/common';
 import { TurmasService } from './turmas.service';
 import { Role } from '@prisma/client';
 import { AuthGuard } from '@nestjs/passport';
 import { Role as RoleDecorator } from '../auth/role.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { CreateTurmaDto } from './dto/create-turma.dto';
+import { UpdateTurmaDto } from './dto/update-turma.dto';
+import { RequestWithUser } from '../auth/request-with-user.interface';
+import { PermissionsService } from '../auth/permissions.service';
 
 @Controller('turmas')
 export class TurmasController {
-  constructor(private readonly turmasService: TurmasService) {}
+  constructor(
+    private readonly turmasService: TurmasService,
+    private readonly permissionsService: PermissionsService,
+  ) {}
 
-  // Administrador cria uma turma
   @Post('create')
   @RoleDecorator(Role.admin)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  async createTurma(
-    @Body() createTurmaDto: { name: string; professorId: number },
-  ) {
+  async createTurma(@Body() createTurmaDto: CreateTurmaDto) {
     return this.turmasService.createTurma(createTurmaDto);
   }
 
-  // Administrador lista todas as turmas
   @Get()
   @RoleDecorator(Role.admin)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -36,45 +41,63 @@ export class TurmasController {
     return this.turmasService.findAllTurmas();
   }
 
-  // Administrador edita uma turma
   @Patch(':id')
   @RoleDecorator(Role.admin)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   async editTurma(
     @Param('id') id: number,
-    @Body() updateTurmaDto: { name?: string; professorId?: number },
+    @Body() updateTurmaDto: UpdateTurmaDto,
   ) {
     return this.turmasService.updateTurma(id, updateTurmaDto);
   }
 
-  // Administrador exclui uma turma
   @Delete(':id')
-  @RoleDecorator(Role.admin)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  async deleteTurma(@Param('id') id: number) {
+  async deleteTurma(@Request() req: RequestWithUser, @Param('id') id: number) {
+    const { role } = req.user;
+
+    this.permissionsService.canDeleteTurma(role);
+
     return this.turmasService.deleteTurma(id);
   }
 
-  // Professor lista suas turmas
   @Get('me')
   @RoleDecorator(Role.professor)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  async listProfessorTurmas(@Param('id') professorId: number) {
+  async listProfessorTurmas(@Request() req: RequestWithUser) {
+    const professorId = req.user.id;
     return this.turmasService.findProfessorTurmas(professorId);
   }
 
-  // Professor adiciona alunos a uma turma
   @Post(':id/add-aluno')
   @RoleDecorator(Role.professor)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   async addAlunoToTurma(
     @Param('id') turmaId: number,
     @Body() alunoDto: { alunoId: number },
+    @Request() req: RequestWithUser,
   ) {
-    return this.turmasService.addAlunoToTurma(turmaId, alunoDto.alunoId);
+    const professorId = req.user.id;
+
+    const turma = await this.turmasService.findTurmaById(turmaId);
+
+    if (!turma) {
+      throw new NotFoundException('Turma não encontrada.');
+    }
+
+    this.permissionsService.canManageOwnTurma(
+      req.user.role,
+      turma.professorId,
+      professorId,
+    );
+
+    return this.turmasService.addAlunoToTurma(
+      turmaId,
+      alunoDto.alunoId,
+      professorId,
+    );
   }
 
-  // Professor lista alunos de uma turma
   @Get(':id/alunos')
   @RoleDecorator(Role.professor)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
