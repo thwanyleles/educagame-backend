@@ -1,8 +1,9 @@
 import { SetMetadata } from '@nestjs/common';
+import { Role as RoleEnum } from '@prisma/client';
 
 /**
  * Adiciona a metadata 'role' ao handler da rota.
  * Exemplo de uso:
- * @Role(Role.admin)
+ * @Role(RoleEnum.admin)
  */
-export const Role = (role: string) => SetMetadata('role', role);
+export const Role = (role: RoleEnum) => SetMetadata('role', role);
